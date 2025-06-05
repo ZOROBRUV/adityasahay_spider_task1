@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Disc Battle</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+    }
+    .dark-mode {
+      background-color: #121212;
+      color: white;
+    }
+    table {
+      margin: 20px auto;
+      border-spacing: 5px;
+    }
+    td {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: white;
+      border: 2px solid #333;
+      cursor: pointer;
+    }
+    .red { background-color: red; }
+    .yellow { background-color: yellow; }
+    .blocked { background-color: gray !important; cursor: not-allowed; }
+    button, select {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Disc Battle</h1>
+  <div id="gameStatus">Red's Turn - Yellow, block a column!</div>
+  <div>
+    <label for="blockColumn">Block Column:</label>
+    <select id="blockColumn"></select>
+    <button onclick="blockColumn()">Block</button>
+  </div>
+  <table id="gameBoard"></table>
+  <div>
+    <button onclick="restartGame()">Restart Game</button>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    <button onclick="toggleSound()">Toggle Sound</button>
+  </div>
+  <audio id="dropSound" src="drop.mp3"></audio>
+
+  <script>
+    let rows = 6;
+    let cols = 7;
+    let board = [];
+    let currentPlayer = 'red';
+    let gameActive = true;
+    let blockPending = true;
+    let blockedCol = -1;
+    let soundOn = true;
+
+  
+    function initBoard() {
+      board = [];
+      let table = document.getElementById("gameBoard");
+      table.innerHTML = "";
+      for (let r = 0; r < rows; r++) {
+        let row = [];
+        let tr = document.createElement("tr");
+        for (let c = 0; c < cols; c++) {
+          let td = document.createElement("td");
+          td.dataset.row = r;
+          td.dataset.col = c;
+          td.onclick = () => makeMove(c);
+          tr.appendChild(td);
+          row.push('');
+        }
+        table.appendChild(tr);
+        board.push(row);
+      }
+      populateBlockOptions();
+    }
+
+
+    function populateBlockOptions() {
+      let select = document.getElementById("blockColumn");
+      select.innerHTML = "";
+      for (let c = 0; c < cols; c++) {
+     
+        if (board[0][c] === '') {
+          let opt = document.createElement("option");
+          opt.value = c;
+          opt.text = "Column " + (c + 1);
+          select.appendChild(opt);
+        }
+      }
+    }
+
+    function blockColumn() {
+      if (!blockPending || !gameActive) return;
+      blockedCol = parseInt(document.getElementById("blockColumn").value);
+      blockPending = false;
+      updateStatus();
+      highlightBlockedColumn();
+    }
+
+   
+    function makeMove(col) {
+      if (!gameActive || blockPending || col === blockedCol) return;
+
+      for (let r = rows - 1; r >= 0; r--) {
+        if (board[r][col] === '') {
+          board[r][col] = currentPlayer;
+          document.querySelector(`td[data-row='${r}'][data-col='${col}']`).classList.add(currentPlayer);
+          if (soundOn) document.getElementById("dropSound").play();
+          if (checkWin(r, col)) {
+            gameActive = false;
+            document.getElementById("gameStatus").innerText = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)} wins!`;
+            return;
+          }
+          if (checkDraw()) {
+            gameActive = false;
+            document.getElementById("gameStatus").innerText = "It's a draw!";
+            return;
+          }
+          switchPlayer();
+          return;
+        }
+      }
+    }
+
+    function highlightBlockedColumn() {
+      for (let r = 0; r < rows; r++) {
+        let cell = document.querySelector(`td[data-row='${r}'][data-col='${blockedCol}']`);
+        if (!cell.classList.contains("red") && !cell.classList.contains("yellow")) {
+          cell.classList.add("blocked");
+        }
+      }
+    }
+
+    function removeBlockedHighlight() {
+      document.querySelectorAll("td").forEach(cell => {
+        cell.classList.remove("blocked");
+      });
+    }
+
+ 
+    function switchPlayer() {
+      removeBlockedHighlight();
+      blockedCol = -1;
+      currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+      blockPending = true;
+      updateStatus();
+      populateBlockOptions();
+    }
+
+   
+    function updateStatus() {
+      let opponent = currentPlayer === 'red' ? 'yellow' : 'red';
+      if (blockPending) {
+        document.getElementById("gameStatus").innerText = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn - ${opponent.charAt(0).toUpperCase() + opponent.slice(1)}, block a column!`;
+      } else {
+        document.getElementById("gameStatus").innerText = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn - Choose a column`;
+      }
+    }
+
+  
+    function checkWin(r, c) {
+      return checkDir(r, c, 1, 0) || checkDir(r, c, 0, 1) || checkDir(r, c, 1, 1) || checkDir(r, c, 1, -1);
+    }
+
+    function checkDir(r, c, dr, dc) {
+      let count = 1;
+      count += countDiscs(r, c, dr, dc);
+      count += countDiscs(r, c, -dr, -dc);
+      return count >= 4;
+    }
+
+    function countDiscs(r, c, dr, dc) {
+      let count = 0;
+      let color = board[r][c];
+      for (let i = 1; i < 4; i++) {
+        let nr = r + dr * i;
+        let nc = c + dc * i;
+        if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) break;
+        if (board[nr][nc] === color) count++;
+        else break;
+      }
+      return count;
+    }
+
+ 
+    function checkDraw() {
+      return board[0].every(cell => cell !== '');
+    }
+
+   
+    function restartGame() {
+      currentPlayer = 'red';
+      gameActive = true;
+      blockPending = true;
+      blockedCol = -1;
+      document.getElementById("gameStatus").innerText = "Red's Turn - Yellow, block a column!";
+      initBoard();
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    function toggleSound() {
+      soundOn = !soundOn;
+    }
+
+
+    window.onload = () => {
+      initBoard();
+    };
+  </script>
+
+</body>
+</html>

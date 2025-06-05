@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hammer Strength Game</title>
+
+ 
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    canvas {
+      background-color: rgb(237, 122, 22);
+      border: 2px solid black;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    #score {
+      margin-top: 15px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Hammer Strength Game</h1>
+
+ 
+  <canvas id="gameCanvas" width="400" height="300"></canvas>
+
+  <br><br>
+
+ 
+  <button onclick="stopGame()">STOP</button>
+  <button onclick="restartGame()">RESTART</button>
+
+  <div id="score">Score: --</div>
+
+  <script>
+    
+    var canvas = document.getElementById("gameCanvas");
+    var ctx = canvas.getContext("2d");
+
+    // game variables
+    var angle = 0; 
+    var movingRight = true; 
+    var gameRunning = true; 
+
+   
+    var meterImg = new Image();
+    meterImg.src = "meter.png";
+
+    var hammerImg = new Image();
+    hammerImg.src = "hammer.png";
+
+    
+    function drawGame() {
+    
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+     
+      ctx.drawImage(meterImg, 100, 50, 200, 160);
+
+    
+      ctx.drawImage(hammerImg, 160, 260, 80, 40);
+
+      var rad = angle * Math.PI / 180; 
+
+    
+      var x = 200 + 100 * Math.cos(Math.PI - rad); 
+      var y = 250 - 100 * Math.sin(Math.PI - rad);
+
+      ctx.beginPath();
+      ctx.moveTo(200, 250); 
+      ctx.lineTo(x, y); 
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    
+    function updateGame() {
+      if (gameRunning == false) return;
+
+      var baseSpeed = 6; 
+      var rad = angle * Math.PI / 180;
+      var speed = baseSpeed * Math.sin(rad); // to make it bounce faster near ends
+
+      if (speed < 1.5) {
+        speed = 1.5; // minimum speed
+      }
+
+     
+      if (movingRight) {
+        angle += speed;
+        if (angle >= 180) {
+          angle = 180;
+          movingRight = false;
+        }
+      } else {
+        angle -= speed;
+        if (angle <= 0) {
+          angle = 0;
+          movingRight = true;
+        }
+      }
+
+      drawGame(); 
+
+     
+      requestAnimationFrame(updateGame);
+    }
+
+  
+    function stopGame() {
+      if (gameRunning == false) return;
+
+      gameRunning = false;
+
+      
+      var difference = Math.abs(angle - 90);
+      var score = 100 - (difference * (100 / 90));
+      if (score < 0) score = 0;
+      score = Math.round(score);
+
+      
+      var scoreText = "Score: " + score;
+      document.getElementById("score").innerText = scoreText;
+    }
+
+    function restartGame() {
+      angle = 0;
+      movingRight = true;
+      gameRunning = true;
+      document.getElementById("score").innerText = "Score: --";
+      updateGame(); 
+    }
+
+ 
+   var imagesLoaded = 0;
+
+function checkAllImagesLoaded() {
+  imagesLoaded++;
+  if (imagesLoaded === 2) {  
+    drawGame();
+    updateGame();
+  }
+}
+
+meterImg.onload = checkAllImagesLoaded;
+hammerImg.onload = checkAllImagesLoaded;
+  </script>
+
+</body>
+</html>
